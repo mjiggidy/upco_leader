@@ -1,5 +1,5 @@
 from PIL import Image, ImageColor, ImageDraw, ImageFont
-import math, sys
+import math, sys, pathlib
 
 
 
@@ -34,33 +34,68 @@ def drawColorRamp(width=500, height=25, file_output=None):
 
 
 
-def drawCountdown(radius=800, seconds=8, frame=0, framerate=24, file_output=None):
+def drawCountdown(radius=800, seconds=8, frame=0, framerate=24, no_twopop=False, file_output=None):
 
 	supersample = 4
 	radius *= supersample
 
 	image = Image.new("RGBA", (radius*2, radius*2), (128,128,128,0))
 
+	if no_twopop==False and frame > (seconds-2)*framerate:
+		if file_output:
+			image.save(file_output)
+			return file_output
+		else:
+			return image
+	
+	# Decide if this is the twopop frame or not
+	is_twopop = no_twopop==False and frame == (seconds-2)*framerate
+
 	draw_image = ImageDraw.Draw(image)
 
-	circle_stroke_width = 16 * supersample
-	circle_inner_offset = 2 * circle_stroke_width  # 2 leaves an empty area the side of the stroke width between the two circles
+	# Draw the clock circles ======
+	circle_stroke_width = 10 * supersample
+	circle_inner_offset = 4 * circle_stroke_width  # 2 leaves an empty area the side of the stroke width between the two circles
 
-	# Outer circle
-	draw_image.ellipse([(0,0),(radius*2, radius*2)], fill=None, outline=(0,0,0,255), width=circle_stroke_width)
+	# Countdown pie fill
+	draw_image.pieslice(
+		xy=[(0,0),(radius*2, radius*2)],
+		start=270,
+		end=270 + (frame%framerate/framerate * 360),
+		fill=(255,255,255,128)
+	)
 
-	# Inner circle + fill
-	draw_image.ellipse([(0+circle_inner_offset),(0+circle_inner_offset), (radius* 2 - circle_inner_offset), (radius*2 - circle_inner_offset)], fill=(128,128,128,255), outline=(0,0,0,255), width=circle_stroke_width)
-#
-#	text_font = ImageFont.truetype("arialbd.ttf", size=2000)
-#	text_offset = draw_image.textsize("8", font=text_font)
-#	draw_image.text(
-#		xy=[(radius - int(text_offset[0]/1.65)), (radius - int(text_offset[1]/1.65))],
-#		text="4",
-#		fill=(0,0,0,255),
-#		stroke_width=supersample*4,
-#		stroke_fill=(255,255,255,255),
-#		font=text_font)
+	# Outer circle stroke
+	draw_image.ellipse(
+		xy=[(0,0),(radius*2, radius*2)],
+		fill=None if not is_twopop else (255,255,255,255),	# White if 2pop frame
+		outline=(0,0,0,255),
+		width=circle_stroke_width
+	)
+
+	# Inner circle stroke
+	draw_image.ellipse(
+		xy=[(0+circle_inner_offset),(0+circle_inner_offset), (radius* 2 - circle_inner_offset), (radius*2 - circle_inner_offset)],
+		fill=None if not is_twopop else (255,255,255,255),	# White if 2pop frame
+		outline=(0,0,0,255),
+		width=circle_stroke_width
+	)
+
+
+	# Draw the count
+	count_text = str(seconds - frame // framerate)
+
+	text_font = ImageFont.truetype("arialbd.ttf", size=int(1.25 * radius))
+	text_offset = draw_image.textsize(count_text, font=text_font)	# TODO: textsize() seems to be incorrect -- using 1.65 Y offset for correction
+	print(f"Using {text_offset}")
+	draw_image.text(
+		xy=[(radius - int(text_offset[0]/2)) - int(circle_stroke_width/2), (radius - int(text_offset[1]/1.65) - int(circle_stroke_width/2))],
+		text=count_text,
+		fill=(0,0,0,255),
+		stroke_width=circle_stroke_width,
+		stroke_fill=(255,255,255,255),
+		font=text_font
+	)
 
 	image = image.resize((int(radius*2/supersample), int(radius*2/supersample)), Image.BOX)
 	
@@ -212,4 +247,12 @@ def drawFrameOverlay(frame_width=2160, frame_height=1080, active_width=2048, act
 
 if __name__ == "__main__":
 
-	drawCountdown(file_output=sys.argv[-1] if len(sys.argv) > 1 else "test.png")
+	seconds = 8
+	framerate = 24
+	framecount = seconds * framerate
+
+	out_path = pathlib.Path(sys.argv[-1])
+	
+	for x in range(framecount):
+		frame_path = pathlib.Path(out_path.parent, out_path.stem + '_' + str(x).zfill(8) + out_path.suffix)
+		drawCountdown(file_output=frame_path, seconds=seconds, framerate=framerate, frame=x)
