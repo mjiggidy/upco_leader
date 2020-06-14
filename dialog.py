@@ -5,7 +5,7 @@ class Settings(QtWidgets.QDialog):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
-		self.setFixedWidth(200)
+		self.setFixedWidth(225)
 		self.setWindowTitle("UPCO Leader")
 
 		self.lay_main = QtWidgets.QVBoxLayout()
@@ -39,25 +39,34 @@ class Settings(QtWidgets.QDialog):
 		
 		self.lbl_width = QtWidgets.QLabel("Width")
 		self.lay_dimensions.addWidget(self.lbl_width, 1, 0)
-		self.txt_width = QtWidgets.QLineEdit()
-		self.txt_width.setValidator(self.val_int)
-		self.lay_dimensions.addWidget(self.txt_width, 2, 0)
+		#self.txt_width = QtWidgets.QLineEdit()
+		#self.txt_width.setValidator(self.val_int)
+		self.spin_width = QtWidgets.QSpinBox()
+		#self.spin_width.setSuffix(' px')
+		self.spin_width.setRange(1,9999)
+		self.lay_dimensions.addWidget(self.spin_width, 2, 0)
 
 		self.lbl_by = QtWidgets.QLabel('x')
 		self.lay_dimensions.addWidget(self.lbl_by, 2, 1)
 
 		self.lbl_height = QtWidgets.QLabel("Height")
 		self.lay_dimensions.addWidget(self.lbl_height, 1, 2)
-		self.txt_height = QtWidgets.QLineEdit()
-		self.txt_height.setValidator(self.val_int)
-		self.lay_dimensions.addWidget(self.txt_height, 2, 2)
+		#self.txt_height = QtWidgets.QLineEdit()
+		#self.txt_height.setValidator(self.val_int)
+		self.spin_height = QtWidgets.QSpinBox()
+		#self.spin_height.setSuffix(' px')
+		self.spin_height.setRange(1,9999)
+		self.lay_dimensions.addWidget(self.spin_height, 2, 2)
 
-		self.lay_dimensions.addItem(QtWidgets.QSpacerItem(20, 1), 2, 3)
+		self.spacer_horizontal = QtWidgets.QSpacerItem(1,1, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+		self.lay_dimensions.addItem(self.spacer_horizontal, 2, 3, 2, 1)
 
 		self.lbl_aspect = QtWidgets.QLabel("Aspect")
 		self.lay_dimensions.addWidget(self.lbl_aspect, 1, 4)
-		self.txt_aspect = QtWidgets.QLineEdit()
-		self.lay_dimensions.addWidget(self.txt_aspect, 2, 4)
+		#self.txt_aspect = QtWidgets.QLineEdit()
+		self.spin_aspect = QtWidgets.QDoubleSpinBox()
+		self.spin_aspect.setDecimals(2)
+		self.lay_dimensions.addWidget(self.spin_aspect, 2, 4)
 
 		# Output dir
 		self.grp_output = QtWidgets.QGroupBox("Output Path")
@@ -93,24 +102,24 @@ class Settings(QtWidgets.QDialog):
 	
 	def setSizeFromPreset(self, idx):
 		
-		self.txt_aspect.blockSignals(True)
-		width, height = self.cmb_presets.itemData(idx)
+		self.spin_aspect.blockSignals(True)
+
+		try:
+			width, height = self.cmb_presets.itemData(idx)
+		except:
+			return
 		
-		self.txt_width.setText(str(width))
-		self.txt_height.setText(str(height))
+		self.spin_width.setValue(width)
+		self.spin_height.setValue(height)
 		
-		self.txt_aspect.blockSignals(False)
+		self.spin_aspect.blockSignals(False)
 		self.updateAspectRatio()
 	
 	def updateAspectRatio(self):
-		width = self.txt_width.text()
-		height= self.txt_height.text()
-		
-		if width.isnumeric() and height.isnumeric():
-			try:
-				self.txt_aspect.setText(str(round(int(width)/int(height), 2)))
-			except:
-				pass
+		width = self.spin_width.value()
+		height= self.spin_height.value()
+
+		self.spin_aspect.setValue(width/height)
 	
 	def browseForOutput(self, *args, **kwargs):
 		path = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose output directory")
@@ -127,8 +136,8 @@ if __name__ == "__main__":
 	wnd_settings.show()
 
 	# Aspect Ratio Calculator
-	wnd_settings.txt_width.textChanged.connect(wnd_settings.updateAspectRatio)
-	wnd_settings.txt_height.textChanged.connect(wnd_settings.updateAspectRatio)
+	wnd_settings.spin_width.valueChanged.connect(wnd_settings.updateAspectRatio)
+	wnd_settings.spin_height.valueChanged.connect(wnd_settings.updateAspectRatio)
 
 	# Presets
 	wnd_settings.cmb_presets.currentIndexChanged.connect(wnd_settings.setSizeFromPreset)
@@ -137,6 +146,7 @@ if __name__ == "__main__":
 	wnd_settings.cmb_presets.addItem("4K: 4096 x 2048", (4096,2048))
 	wnd_settings.cmb_presets.addItem("2K: 2048 x 1168", (2048,1168))
 	wnd_settings.cmb_presets.addItem("HD: 1920 x 1080", (1920,1080))
+	wnd_settings.cmb_presets.addItem("Custom...")
 
 	# Output directory
 	wnd_settings.btn_browse.clicked.connect(wnd_settings.browseForOutput)
