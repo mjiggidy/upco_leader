@@ -1,4 +1,7 @@
 from PySide2 import QtWidgets, QtGui
+import upco_leader
+import pathlib
+from PIL import Image, ImageColor
 
 class Settings(QtWidgets.QDialog):
 
@@ -145,6 +148,57 @@ class Settings(QtWidgets.QDialog):
 		else:
 			self.btn_ok.setEnabled(False)
 
+	def renderLeader(self):
+		width  = self.spin_width.value()
+		height = self.spin_height.value()
+		width_active  = width * 0.85
+		height_active = height * 0.9
+
+		frame_start = 8600
+		frame_count = 8 * 24
+
+		try:
+			path_output = pathlib.Path(self.txt_output.text())
+			path_output.mkdir(exist_ok=True, parents=True)
+
+		except Exception as e:
+			print(f"Error: {e}")
+			return
+		
+		self.prog_status.setRange(frame_start, frame_start + frame_count)
+
+		# Draw reticle
+		reticle = upco_leader.drawFrameOverlay(frame_width=width, frame_height=height, active_width=width_active, active_height=height_active)
+		star    = upco_leader.drawStar(spokes=48 ,radius=int(width * 0.04))
+
+
+		for x in range(frame_start, frame_start + frame_count):
+			self.prog_status.setValue(x)
+
+			if x < ((frame_start + frame_count) - (2*24)):
+				#print(x,  ((frame_start + frame_count) - (2*24)))
+				frame = Image.new("RGBA", (width, height), ImageColor.getrgb("rgba(128,128,128,255)"))
+				frame.alpha_composite(reticle)
+				frame.alpha_composite(star, dest=(400,200))
+				frame.alpha_composite(star, dest=(400, height-200-star.height))
+				frame.alpha_composite(star, dest=(width-400-star.width, 200))
+				frame.alpha_composite(star, dest=(width-400-star.width, height-200-star.height))
+			
+			else:
+				#print(x,  ((frame_start + frame_count) - (2*24)))
+				frame = Image.new("RGBA", (width, height), ImageColor.getrgb("rgba(0,0,0,255)"))
+
+			count = upco_leader.drawCountdown(radius=600,frame = x-frame_start)
+			#print(width//2, count.width//2, height//2, count.height//2)
+			frame.alpha_composite(count, dest=(width//2 - count.width//2, height//2 - count.height//2))
+
+			frame_output = path_output / f"{self.txt_title.text().strip()}_{width}x{height}.{str(x).zfill(6)}.tif"
+			frame.save(str(frame_output))
+			
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -184,5 +238,8 @@ if __name__ == "__main__":
 
 	# Output directory
 	wnd_settings.btn_browse.clicked.connect(wnd_settings.browseForOutput)
+
+	# Generate
+	wnd_settings.btn_ok.clicked.connect(wnd_settings.renderLeader)
 
 	app.exec_()

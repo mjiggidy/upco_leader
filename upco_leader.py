@@ -42,6 +42,7 @@ def drawCountdown(radius=800, seconds=8, frame=0, framerate=24, no_twopop=False,
 	image = Image.new("RGBA", (radius*2, radius*2), (128,128,128,0))
 
 	if no_twopop==False and frame > (seconds-2)*framerate:
+		image = image.resize((int(radius*2/supersample), int(radius*2/supersample)), Image.BOX)
 		if file_output:
 			image.save(file_output)
 			return file_output
@@ -87,7 +88,7 @@ def drawCountdown(radius=800, seconds=8, frame=0, framerate=24, no_twopop=False,
 
 	text_font = ImageFont.truetype("arialbd.ttf", size=int(1.25 * radius))
 	text_offset = draw_image.textsize(count_text, font=text_font)	# TODO: textsize() seems to be incorrect -- using 1.65 Y offset for correction
-	print(f"Using {text_offset}")
+	#print(f"Using {text_offset}")
 	draw_image.text(
 		xy=[(radius - int(text_offset[0]/2)) - int(circle_stroke_width/2), (radius - int(text_offset[1]/1.65) - int(circle_stroke_width/2))],
 		text=count_text,
